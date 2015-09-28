@@ -18,31 +18,22 @@ class AddRmFilmTest(unittest.TestCase):
 
     def test_add_film_good_data(self):
         driver = self.driver
+        film_name = u"Терминатор"
+        film_year = "1984"
 
-        # вход в систему
-        driver.get("http://localhost/test_app/public_html/php4dvd/")
-        driver.find_element_by_id("username").send_keys("admin")
-        driver.find_element_by_name("password").send_keys("admin")
-        driver.find_element_by_name("submit").click()
+        self.login_in_system()
 
 # на всякий случай создадим фильм
-        driver.find_element_by_css_selector("img[alt=\"Add movie\"]").click()
-        # заодно проверим обязательные поля
-        self.clear_and_check_required_feilds()
-        # если прошли, заносим минимальные данные
-        driver.find_element_by_name("name").send_keys(u"Терминатор")
-        driver.find_element_by_name("year").send_keys("1984")
-        driver.find_element_by_name("format").send_keys("DVD")
-        driver.find_element_by_name("submit").click()
+        self.add_film(film_name, film_year)
         # проверяем, что фильм добавился
-        driver.implicitly_wait(5)
+
         h2 = driver.find_element_by_xpath("//div[@id='movie']/div[2]/h2")
         title_name = u"Терминатор (1984)"
         self.assertEqual(title_name, h2.text)
 
         # выбираем фильм с главной страницы
         driver.find_element_by_link_text("Home").click()
-        driver.implicitly_wait(3)
+
         driver.find_element_by_xpath(
             "//div[@class='movie_box']/div[@class='movie_cover']/div[@alt='Терминатор']"
         ).click()
@@ -87,6 +78,39 @@ class AddRmFilmTest(unittest.TestCase):
         err_labels = driver.find_elements_by_xpath("//label[@class='error']")
         for elem in err_labels:
             self.assertEqual(elem.text, "This field is required")
+
+    def login_in_system(self):
+        """
+        Вход в систему
+        """
+        driver = self.driver
+        # вход в систему
+        driver.get("http://localhost/test_app/public_html/php4dvd/")
+        driver.find_element_by_id("username").send_keys("admin")
+        driver.find_element_by_name("password").send_keys("admin")
+        driver.find_element_by_name("submit").click()
+
+    def add_film(self, name, year, frmt="DVD"):
+        """
+        Добавляет фильм из главной страницы
+        :param name: Название фильма
+        :param year: год фильма
+        :param frmt: формат фильма, есть значение по умолчанию.
+        """
+        driver = self.driver
+        driver.implicitly_wait(3)
+
+        driver.find_element_by_css_selector("img[alt=\"Add movie\"]").click()
+        driver.find_element_by_name("name").clear()
+        driver.find_element_by_name("name").send_keys(name)
+
+        driver.find_element_by_name("year").clear()
+        driver.find_element_by_name("year").send_keys(year)
+
+        driver.find_element_by_name("format").clear()
+        driver.find_element_by_name("format").send_keys(frmt)
+
+        driver.find_element_by_name("submit").click()
 
     def tearDown(self):
         #self.driver.quit()
