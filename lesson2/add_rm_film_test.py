@@ -2,10 +2,8 @@
 __author__ = 'user'
 
 import unittest
-import time
+import random
 from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support.expected_conditions import *
 
 
@@ -16,68 +14,80 @@ class AddRmFilmTest(unittest.TestCase):
     def setUp(self):
         self.driver = webdriver.Firefox()
 
-    def test_add_film_good_data(self):
+    def test_create_film_good(self):
+        """
+        Создает фильм
+        """
         driver = self.driver
-        film_name = u"Терминатор"
-        film_year = "1984"
+        driver.implicitly_wait(10)
+
+        # инициализируем данные для фильма
+        film_param = {
+            'name': u"Мадагаскар",
+            'year': u"2000",
+            'format': u"DVD",
+            'note': u"Описание фильма, необязательное поле Personal notes"
+        }
+        self.login_in_system()
+        self.fill_movie_form(film_param, True)
+        #  проверим, что правильно занеслись данные
+        title_elem = driver.find_element_by_xpath("//div[@class='maininfo_full']/h2").text
+        valid_title_elem = film_param['name'] + " (" + film_param['year'] + ")"  # формируем проверочную строку
+        self.assertEqual(title_elem, valid_title_elem)
+
+        #  проверим, что он отображается на главной странице
+        driver.find_element_by_link_text("Home").click()
+        driver.find_element_by_xpath("//div[@title=\"%s\"]" % film_param['name']).click()
+
+    def test_create_film_bad(self):
+        """
+        Пробует создать фильм с незаполненными обязательными полями
+        """
+        # инициализируем данные для фильма
+        film_param = {
+            'name': u"Пираты карибского моря",
+            'year': u"2001",
+            'format': u"DVD",
+            'note': u"Описание фильма, необязательное поле Personal notes"
+        }
+        self.login_in_system()
+        self.fill_movie_form(film_param)
+        self.clear_and_check_required_feilds()
+
+    def test_delete_film(self):
+        """
+        Удаляет фильм из каталога
+        """
+        driver = self.driver
+        driver.implicitly_wait(10)
 
         self.login_in_system()
+        movie_boxes = driver.find_elements_by_xpath("//div[@class='nocover']")
+        first_len = len(movie_boxes)
+        if first_len != 0:
+            removing_film = self.give_random_film(movie_boxes)
+            removing_film.click()
+            driver.find_element_by_xpath("//img[@title='Remove']").click()
+            alert = driver.switch_to_alert()
+            alert.accept()
 
-# на всякий случай создадим фильм
-        self.add_film(film_name, film_year)
-        # проверяем, что фильм добавился
+            # проверяем, сколько теперь нашлось фильмов
+            if first_len == 1:  # если был один фильм, то на главной теперь пусто, ищем это утверждение
+                no_movies = driver.find_element_by_class_name("content").text
+                self.assertEqual(no_movies, "No movies where found.")
+                last_len = 0  # длину найденных элементов делаем 0
+            else:
+                movie_boxes = driver.find_elements_by_xpath("//div[@class='movie_box']")
+                last_len = len(movie_boxes)
 
-        h2 = driver.find_element_by_xpath("//div[@id='movie']/div[2]/h2")
-        title_name = u"Терминатор (1984)"
-        self.assertEqual(title_name, h2.text)
+            if first_len == last_len:
+                raise AssertionError, u"Фильм не удалился"
+        else:
+            raise NoSuchElementException, u"Нечего удалять"
 
-        # выбираем фильм с главной страницы
-        driver.find_element_by_link_text("Home").click()
-
-        driver.find_element_by_xpath(
-            "//div[@class='movie_box']/div[@class='movie_cover']/div[@alt='Терминатор']"
-        ).click()
-        # заходим на редактирование
-        driver.find_element_by_css_selector("img[alt=\"Edit\"]").click()
-
-        # добавляем personal notes
-        personal_notes = u"Эффект дыма, поднимающегося от куртки Шварценеггера"
-        driver.find_element_by_name("notes").clear()  # на всякий случай очистим поле
-        driver.find_element_by_name("notes").send_keys(personal_notes)  # ввели описание
-        driver.find_element_by_name("submit").click()
-        # проверяем, что описание добавилось
-        notes = driver.find_element_by_class_name("notes")
-        self.assertEqual(notes.text, u"Personal notes\n" + personal_notes)
-
-        # переходим на редактирование для удалением personal notes
-        driver.find_element_by_css_selector("img[alt=\"Edit\"]").click()
-
-        driver.find_element_by_name("notes").clear()  # удаляем описание
-        driver.find_element_by_name("submit").click()
-
-
-        finded = ""
-        try:
-            finded = driver.find_element_by_class_name("notes").text
-        except:
-            pass
-
-        if finded == (u"Personal notes\n" + personal_notes):
-            raise AssertionError
-
-    def clear_and_check_required_feilds(self):
-        """
-        Чистит обязательные поля и проверяет, выдалось ли сообщение об обязательности их после клика
-        """
-        driver = self.driver
-        req_fields = driver.find_elements_by_class_name("required")
-        for elem in req_fields:
-            elem.clear()
-        driver.find_element_by_name("submit").click()
-# проверим, что выдались предупреждения об обязательных полях
-        err_labels = driver.find_elements_by_xpath("//label[@class='error']")
-        for elem in err_labels:
-            self.assertEqual(elem.text, "This field is required")
+    def tearDown(self):
+        # self.driver.quit()
+        pass
 
     def login_in_system(self):
         """
@@ -90,28 +100,48 @@ class AddRmFilmTest(unittest.TestCase):
         driver.find_element_by_name("password").send_keys("admin")
         driver.find_element_by_name("submit").click()
 
-    def add_film(self, name, year, frmt="DVD"):
+    def fill_movie_form(self, param, btn=False):
         """
-        Добавляет фильм из главной страницы
-        :param name: Название фильма
-        :param year: год фильма
-        :param frmt: формат фильма, есть значение по умолчанию.
+        Добавляет фильм
         """
         driver = self.driver
         driver.implicitly_wait(3)
 
         driver.find_element_by_css_selector("img[alt=\"Add movie\"]").click()
         driver.find_element_by_name("name").clear()
-        driver.find_element_by_name("name").send_keys(name)
+        driver.find_element_by_name("name").send_keys(param["name"])
 
         driver.find_element_by_name("year").clear()
-        driver.find_element_by_name("year").send_keys(year)
+        driver.find_element_by_name("year").send_keys(param["year"])
 
         driver.find_element_by_name("format").clear()
-        driver.find_element_by_name("format").send_keys(frmt)
+        driver.find_element_by_name("format").send_keys(param["format"])
+
+        driver.find_element_by_name("notes").clear()
+        driver.find_element_by_name("notes").send_keys(param["note"])
+
+        if btn == True:
+            driver.find_element_by_name("submit").click()
+
+    def clear_and_check_required_feilds(self):
+        """
+        Чистит обязательные поля и проверяет, выдалось ли сообщение об обязательности их после клика
+        """
+        driver = self.driver
+        req_fields = driver.find_elements_by_class_name("required")
+        for elem in req_fields:
+            elem.clear()  # зачистим все поля, обозначенные как уникальные
 
         driver.find_element_by_name("submit").click()
+        # проверим, что выдались предупреждения об обязательных полях
+        err_labels = driver.find_elements_by_xpath("//label[@class='error']")
+        for elem in err_labels:
+            self.assertEqual(elem.text, "This field is required")
 
-    def tearDown(self):
-        #self.driver.quit()
-        pass
+    def give_random_film(self, boxes):
+        count = len(boxes)
+        random_count = random.randint(0, count-1)
+        box = boxes[random_count]
+        return box
+
+
