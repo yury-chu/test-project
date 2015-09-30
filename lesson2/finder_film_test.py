@@ -12,72 +12,171 @@ from selenium.webdriver.support.expected_conditions import *
 
 class FinderFilmTest(unittest.TestCase):
     """
-    Разработать тест для добавления и удаления описания фильма
+    Тесты для поисковика фильма:
+        test_find_good - с положительным результатом
+        test_find_bad - с отрицательным результаом
     """
     def setUp(self):
         self.driver = webdriver.Firefox()
 
-    def test_film_finded(self):
+    def test_find_good(self):
+        """
+        Тест с ожидаемым пололжительным результатом, что фильм найдется
+        """
         driver = self.driver
+        driver.implicitly_wait(10)
 
+        # инициализируем параметры для добавляемого в дальнейшем фильма
+        film_param_1 = {
+            'name': u"Унесенные ветром",
+            'year': u"1990",
+            'format': u"DVD",
+            'note': u"Описание фильма, необязательное поле Personal notes"
+        }
+        film_param_2 = {
+            'name': u"Особо опасен",
+            'year': u"2010",
+            'format': u"DVD",
+            'note': u"Описание фильма, необязательное...."
+        }
+
+        # вход в систему
+        self.login_in_system()
+
+        # добавим два фильма для тестирования поиска
+        self.fill_movie_form(film_param_1, True, True)
+        self.fill_movie_form(film_param_2, True, True)
+
+        # смотрим и запоминаем сколько есть фильмов
+        movie_boxes = driver.find_elements_by_xpath("//div[@class='nocover']")
+        first_len_boxes = len(movie_boxes)
+
+        # получим поле поиска
+        find_field = self.give_find_field()
+        # поищем первый фильм по поиску
+        find_field.send_keys(film_param_1['name'])
+        find_field.send_keys(Keys.RETURN)
+        time.sleep(3)
+
+        # смотрим и запоминаем сколько стало фильмов
+        movie_boxes = driver.find_elements_by_xpath("//div[@class='nocover']")
+        last_len_boxes = len(movie_boxes)
+
+        if first_len_boxes == last_len_boxes:
+            raise AssertionError, u"Количество фильмов не изменилось, возможно поиск не работает"
+        else:
+            # проверим, если тут искомый фильм
+            driver.find_element_by_xpath("//div[@title=\"%s\"]" % film_param_1['name']).click()
+            # если есть, и можно кликнуть, то все хорошо
+
+    def test_film_bad(self):
+        """
+        Тест с ожидаемым отрицательным результатом, что фильм не найдется
+        """
+        driver = self.driver
+        driver.implicitly_wait(10)
+
+        # инициализируем параметры
+        film_param_1 = {
+            'name': u"Хороший фильм",
+            'year': u"1991",
+            'format': u"DVD",
+            'note': u"Описание фильма, необязательное поле Personal notes"
+        }
+        film_param_2 = {
+            'name': u"Самый лучший фильм",
+            'year': u"2010",
+            'format': u"DVD",
+            'note': u"Описание фильма, необязательное...."
+        }
+
+        film_param_3 = {
+            'name': u"Абракадабра100500",
+            'year': u"0001",
+            'format': u"dont know",
+            'note': u"Описание фильма, необязательное поле Personal notes"
+        }
+
+        # вход в систему
+        self.login_in_system()
+
+        # добавим два фильма для тестирования поиска
+        self.fill_movie_form(film_param_1, True, True)
+        self.fill_movie_form(film_param_2, True, True)
+
+        # попробуем поискать несуществующий фильм, но сначала убедимся, что его нету в каталоге
+        try:
+            driver.find_element_by_xpath("//div[@title=\"%s\"]" % film_param_3['name']).click()
+            so_bad = 1
+        except NoSuchElementException:
+            # если не получилось найти, то можно проверять поиск по нему
+            so_bad = 0
+
+        if so_bad == 0:
+            # получим поле поиска
+            find_field = self.give_find_field()
+            # поищем первый фильм по поиску
+            find_field.send_keys(film_param_3['name'])
+            find_field.send_keys(Keys.RETURN)
+            time.sleep(3)
+
+            # Убедимся, что не отображается никаких найденных фильмов на странице
+            no_movies = driver.find_element_by_class_name("content").text
+            self.assertEqual(no_movies, "No movies where found.")
+
+        if so_bad == 1:
+            raise AssertionError, u"Нашелся какой то фильм, нужно взять на тестирование несуществующий"
+
+    def tearDown(self):
+        self.driver.quit()
+
+    # ---------------Здесь вспомогательные методы для тестов----------------
+
+    def give_find_field(self):
+        """
+        Возвращает очищенное поле поиска для работы с ним
+        """
+        driver = self.driver
+        elem = driver.find_element_by_xpath("//div[@class='searchbox']/input")
+        elem.send_keys(Keys.CONTROL, "a")
+        time.sleep(1)
+        elem.send_keys(Keys.BACK_SPACE)
+        elem.clear()  # продублируем очистку поля на всякий случай
+        return elem
+
+    def login_in_system(self):
+        """
+        Вход в систему
+        """
+        driver = self.driver
         # вход в систему
         driver.get("http://localhost/test_app/public_html/php4dvd/")
         driver.find_element_by_id("username").send_keys("admin")
         driver.find_element_by_name("password").send_keys("admin")
         driver.find_element_by_name("submit").click()
 
-        # добавим фильм, который потом будем искать
+    def fill_movie_form(self, param, btn=False, go_main=False):
+        """
+        Добавляет фильм
+        """
+        driver = self.driver
+        driver.implicitly_wait(3)
+
         driver.find_element_by_css_selector("img[alt=\"Add movie\"]").click()
-        # заносим минимальные данные
-        film_name = u"Терминатор"
-        film_year = u"1984"
-        driver.find_element_by_name("name").send_keys(film_name)
-        driver.find_element_by_name("year").send_keys(film_year)
-        driver.find_element_by_name("submit").click()
+        driver.find_element_by_name("name").clear()
+        driver.find_element_by_name("name").send_keys(param["name"])
 
-        # переходим на главную
-        driver.find_element_by_link_text("Home").click()
-        elem = driver.find_element_by_xpath("//div[@class='searchbox']/input")
-        elem.send_keys(film_name)
-        elem.send_keys(Keys.RETURN)
+        driver.find_element_by_name("year").clear()
+        driver.find_element_by_name("year").send_keys(param["year"])
 
-        driver.implicitly_wait(3)
-        finded = driver.find_elements_by_xpath("//div[@class='movie_cover']/div[@alt='" + film_name +"']")
-        if len(finded) > 0:
-            pass  # элементы нашлись
-        else:
-            raise AssertionError
+        driver.find_element_by_name("format").clear()
+        driver.find_element_by_name("format").send_keys(param["format"])
 
-        # теперь проверим, что не находится фильм, которого нету в каталоге
-        # зачищаем поле поиска
-        elem.send_keys(Keys.CONTROL, "a")
-        time.sleep(1)
-        elem.send_keys(Keys.BACK_SPACE)
-        elem.send_keys(Keys.RETURN)
+        driver.find_element_by_name("notes").clear()
+        driver.find_element_by_name("notes").send_keys(param["note"])
 
-        driver.find_element_by_link_text("Home").click()
-        driver.implicitly_wait(3)
-
-        no_finded_film = u"Планета обезьян"
-        finded_elems = []
-        try:
-            finded_elems = driver.find_elements_by_xpath("//div[@title='" + no_finded_film + "']")
-        except:
-            pass
-        if len(finded_elems) > 0:
-            raise AssertionError, "Такой фильм уже есть, тест будет не точным"
-
-        # если дошли, то можно искать этот фильм с ожидаемым результатом, что ничего не найдено
-        elem = driver.find_element_by_xpath("//div[@class='searchbox']/input")
-        elem.send_keys(no_finded_film)
-        elem.send_keys(Keys.RETURN)
-        driver.implicitly_wait(3)
-        bad_find_result = driver.find_element_by_class_name("content")
-        if bad_find_result.text == "No movies where found.":
-            pass #  действительно ничего не нашлось
-        else:
-            assert AssertionError, "Нашелся какой то фмльм, которого не должно быть"
-
-    def tearDown(self):
-        self.driver.quit()
+        if btn == True:
+            driver.find_element_by_name("submit").click()
+        if go_main == True:
+            driver.find_element_by_link_text("Home").click()
 
