@@ -3,10 +3,11 @@ __author__ = 'user'
 
 from selenium import webdriver
 import pytest
+
 from model.application import Application
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def app(request):
     driver = webdriver.Firefox()
     driver.implicitly_wait(10)

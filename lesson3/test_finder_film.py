@@ -3,7 +3,6 @@ __author__ = 'user'
 
 from selenium.webdriver.support.expected_conditions import *
 
-from selenium import webdriver
 from selenium_fixture import app
 from model.user import User
 from model.film import Film
@@ -37,6 +36,8 @@ def test_find_good(app):
         app.give_this_film(Film.goneWind())
         # если есть, и можно кликнуть, то все хорошо
 
+    app.logout()
+
 
 def test_find_bad(app):
     """
@@ -67,3 +68,5 @@ def test_find_bad(app):
 
     if so_bad == 1:
         raise AssertionError, u"Нашелся какой то фильм, нужно взять на тестирование несуществующий"
+
+    app.logout()

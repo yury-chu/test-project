@@ -2,12 +2,24 @@
 
 import time
 import random
+
 from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support.expected_conditions import *
+from lesson3.pages.login_page import LoginPage
+from lesson3.pages.internal_page import InternalPage
+from lesson3.pages.film_management_page import FilmManagementPage
+
 
 class Application(object):
 
     def __init__(self, driver):
         self.driver = driver
+        self.wait = WebDriverWait(driver, 10)
+        self.login_page = LoginPage(driver)
+        self.internal_page = InternalPage(driver)
+        self.film_management_page = FilmManagementPage(driver)
 
     # ---------------Здесь вспомогательные методы для тестов----------------
     def give_find_field(self):
@@ -28,33 +40,48 @@ class Application(object):
         """
         driver = self.driver
         driver.get("http://localhost/test_app/public_html/php4dvd/")
-        driver.find_element_by_id("username").send_keys(user.username)
-        driver.find_element_by_name("password").send_keys(user.password)
-        driver.find_element_by_name("submit").click()
+        lp = self.login_page
+        if self.is_not_logged_in():
+            lp.username_field.send_keys(user.username)
+            lp.password_field.send_keys(user.password)
+            lp.submit_button.click()
+        else:
+            self.logout()
+            lp.username_field.send_keys(user.username)
+            lp.password_field.send_keys(user.password)
+            lp.submit_button.click()
+
+    def logout(self):
+        """
+        Выходит из системы
+        """
+        self.internal_page.logout_button.click()
+        self.wait.until(alert_is_present()).accept()
 
     def fill_movie_form(self, param, btn=False, go_main=False):
         """
         Заливает поля добавления фильма, может нажимать кнопку и преходить на главную
         """
-        driver = self.driver
-        driver.find_element_by_css_selector("img[alt=\"Add movie\"]").click()
-        driver.find_element_by_name("name").clear()
-        driver.find_element_by_name("name").send_keys(param.name)
+        fm = self.film_management_page
 
-        driver.find_element_by_name("year").clear()
-        driver.find_element_by_name("year").send_keys(param.year)
+        fm.go_to_film_management.click()
+        fm.name_field.clear()
+        fm.name_field.send_keys(param.name)
 
-        driver.find_element_by_name("format").clear()
-        driver.find_element_by_name("format").send_keys(param.frmt)
+        fm.year_field.clear()
+        fm.year_field.send_keys(param.year)
 
-        driver.find_element_by_name("notes").clear()
-        driver.find_element_by_name("notes").send_keys(param.note)
+        fm.frmt_field.clear()
+        fm.frmt_field.send_keys(param.frmt)
+
+        fm.note_feild.clear()
+        fm.note_feild.send_keys(param.note)
 
         if btn:
-            driver.find_element_by_name("submit").click()
+            fm.button_save.click()
 
         if go_main:
-            driver.find_element_by_link_text("Home").click()
+            fm.link_to_main_page.click()
 
     def films_on_main_page(self):
         """
@@ -143,3 +170,22 @@ class Application(object):
         driver.find_element_by_xpath("//img[@title='Remove']").click()
         alert = driver.switch_to_alert()
         alert.accept()
+
+    def is_logged_in(self):
+        """
+        Проверяет, залогинены лы мы в системе
+        """
+        driver = self.driver
+        try:
+            self.wait.until(presence_of_element_located((By.CSS_SELECTOR, "nav")))
+            return True
+        except WebDriverException:
+            return False
+
+    def is_not_logged_in(self):
+        try:
+            self.wait.until(presence_of_element_located((By.ID, "loginform")))
+            return True
+        except WebDriverException:
+            return False
+

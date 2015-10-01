@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 __author__ = 'user'
 
-import random
+
 from selenium.webdriver.support.expected_conditions import *
 
 from selenium_fixture import app
@@ -23,6 +23,7 @@ def test_create_film_good(app):
 
     #  проверим, что он отображается на главной странице и на него можно перейти
     app.film_exist_on_main_page(Film.madagaskar())
+    app.logout()
 
 
 def test_create_film_bad(app):
@@ -32,6 +33,7 @@ def test_create_film_bad(app):
     app.login_in_system(User.Admin())
     app.fill_movie_form(Film.pirates())
     app.clear_and_check_required_fields()
+    app.logout()
 
 
 def test_delete_film(app):
@@ -56,3 +58,4 @@ def test_delete_film(app):
             raise AssertionError, u"Фильм не удалился"
     else:
         raise NoSuchElementException, u"Нечего удалять"
+    app.logout()
