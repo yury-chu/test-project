@@ -8,44 +8,32 @@ from selenium.webdriver.support.expected_conditions import *
 
 from selenium_fixture import driver
 from model.user import User
+from model.film import Film
 
 
 def test_create_film_good(driver):
     """
     Создает фильм
     """
-    # инициализируем данные для фильма
-    film_param = {
-        'name': u"Мадагаскар",
-        'year': u"2000",
-        'format': u"DVD",
-        'note': u"Описание фильма, необязательное поле Personal notes"
-    }
     login_in_system(driver, User.Admin())
-    fill_movie_form(driver, film_param, True)
+    fill_movie_form(driver, Film.madagaskar(), True)
     #  проверим, что правильно занеслись данные
     title_elem = driver.find_element_by_xpath("//div[@class='maininfo_full']/h2").text
-    valid_title_elem = film_param['name'] + " (" + film_param['year'] + ")"  # формируем проверочную строку
+    valid_title_elem = Film.madagaskar().name + " (" + Film.madagaskar().year + ")"  # формируем проверочную строку
     assert (title_elem, valid_title_elem)
 
     #  проверим, что он отображается на главной странице
     driver.find_element_by_link_text("Home").click()
-    driver.find_element_by_xpath("//div[@title=\"%s\"]" % film_param['name']).click()
+    driver.find_element_by_xpath("//div[@title=\"%s\"]" % Film.madagaskar().name).click()
 
 
 def test_create_film_bad(driver):
     """
     Пробует создать фильм с незаполненными обязательными полями
     """
-    # инициализируем данные для фильма
-    film_param = {
-        'name': u"Пираты карибского моря",
-        'year': u"2001",
-        'format': u"DVD",
-        'note': u"Описание фильма, необязательное поле Personal notes"
-    }
+
     login_in_system(driver, User.Admin())
-    fill_movie_form(driver, film_param)
+    fill_movie_form(driver, Film.pirates())
     clear_and_check_required_feilds(driver)
 
 
@@ -96,16 +84,16 @@ def fill_movie_form(driver, param, btn=False):
     """
     driver.find_element_by_css_selector("img[alt=\"Add movie\"]").click()
     driver.find_element_by_name("name").clear()
-    driver.find_element_by_name("name").send_keys(param["name"])
+    driver.find_element_by_name("name").send_keys(param.name)
 
     driver.find_element_by_name("year").clear()
-    driver.find_element_by_name("year").send_keys(param["year"])
+    driver.find_element_by_name("year").send_keys(param.year)
 
     driver.find_element_by_name("format").clear()
-    driver.find_element_by_name("format").send_keys(param["format"])
+    driver.find_element_by_name("format").send_keys(param.frmt)
 
     driver.find_element_by_name("notes").clear()
-    driver.find_element_by_name("notes").send_keys(param["note"])
+    driver.find_element_by_name("notes").send_keys(param.note)
 
     if btn == True:
         driver.find_element_by_name("submit").click()
