@@ -7,6 +7,7 @@ from selenium import webdriver
 from selenium.webdriver.support.expected_conditions import *
 
 from selenium_fixture import driver
+from model.user import User
 
 
 def test_create_film_good(driver):
@@ -20,7 +21,7 @@ def test_create_film_good(driver):
         'format': u"DVD",
         'note': u"Описание фильма, необязательное поле Personal notes"
     }
-    login_in_system(driver)
+    login_in_system(driver, User.Admin())
     fill_movie_form(driver, film_param, True)
     #  проверим, что правильно занеслись данные
     title_elem = driver.find_element_by_xpath("//div[@class='maininfo_full']/h2").text
@@ -43,7 +44,7 @@ def test_create_film_bad(driver):
         'format': u"DVD",
         'note': u"Описание фильма, необязательное поле Personal notes"
     }
-    login_in_system(driver)
+    login_in_system(driver, User.Admin())
     fill_movie_form(driver, film_param)
     clear_and_check_required_feilds(driver)
 
@@ -52,7 +53,7 @@ def test_delete_film(driver):
     """
     Удаляет фильм из каталога
     """
-    login_in_system(driver)
+    login_in_system(driver, User.Admin())
     movie_boxes = driver.find_elements_by_xpath("//div[@class='nocover']")
     first_len = len(movie_boxes)
     if first_len != 0:
@@ -79,13 +80,13 @@ def test_delete_film(driver):
 
 # ----------------- вспомогательные методы ---------------------
 
-def login_in_system(driver):
+def login_in_system(driver, user):
     """
     Вход в систему
     """
     driver.get("http://localhost/test_app/public_html/php4dvd/")
-    driver.find_element_by_id("username").send_keys("admin")
-    driver.find_element_by_name("password").send_keys("admin")
+    driver.find_element_by_id("username").send_keys(user.username)
+    driver.find_element_by_name("password").send_keys(user.password)
     driver.find_element_by_name("submit").click()
 
 
@@ -130,5 +131,3 @@ def give_random_film(driver, boxes):
     random_count = random.randint(0, count-1)
     box = boxes[random_count]
     return box
-
-

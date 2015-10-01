@@ -11,14 +11,13 @@ from selenium.webdriver.support.expected_conditions import *
 
 from selenium import webdriver
 from selenium_fixture import driver
+from model.user import User
 
 
 def test_find_good(driver):
     """
     Тест с ожидаемым пололжительным результатом, что фильм найдется
     """
-    driver.implicitly_wait(10)
-
     # инициализируем параметры для добавляемого в дальнейшем фильма
     film_param_1 = {
         'name': u"Унесенные ветром",
@@ -34,7 +33,7 @@ def test_find_good(driver):
     }
 
     # вход в систему
-    login_in_system(driver)
+    login_in_system(driver, User.Admin())
 
     # добавим два фильма для тестирования поиска
     fill_movie_form(driver, film_param_1, True, True)
@@ -89,7 +88,7 @@ def test_find_bad(driver):
     }
 
     # вход в систему
-    login_in_system(driver)
+    login_in_system(driver, User.Admin())
 
     # добавим два фильма для тестирования поиска
     fill_movie_form(driver, film_param_1, True, True)
@@ -133,14 +132,14 @@ def give_find_field(driver):
     return elem
 
 
-def login_in_system(driver):
+def login_in_system(driver, user):
     """
     Вход в систему
     """
     # вход в систему
     driver.get("http://localhost/test_app/public_html/php4dvd/")
-    driver.find_element_by_id("username").send_keys("admin")
-    driver.find_element_by_name("password").send_keys("admin")
+    driver.find_element_by_id("username").send_keys(user.username)
+    driver.find_element_by_name("password").send_keys(user.password)
     driver.find_element_by_name("submit").click()
 
 
